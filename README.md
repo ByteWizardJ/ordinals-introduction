@@ -1,6 +1,6 @@
 # Ordinals Introduction
 
-## 比特币基础
+## 1. 比特币基础
 
 ### 1.1 比特币一些特点
 
