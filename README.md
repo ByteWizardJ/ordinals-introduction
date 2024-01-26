@@ -16,11 +16,11 @@
    1. 主网称为 Mainnet 或者 Livenet
    2. 测试网有两种 Testnet 和 Signet，两者的区别在于 Signet 是一个私有的测试网，一个节点想要加入其中需要批准，而 Testnet 是一个公共的测试网，所有节点都可以加入。测试的话二者都可以，但是 Signet 更加安全，因为它是私有的，而 Testnet 是公共的，可能会有人恶意攻击。
 10. 比特币交易浏览器
-   1.  [blockchain.com](https://www.blockchain.com/explorer)
-   2.  [blockchair.com](https://blockchair.com/bitcoin)
-   3.  [blockcypher.com](https://live.blockcypher.com/btc/)
-   4.  [blockstream.info](https://blockstream.info/)
-   5.  [mempool.space](https://mempool.space/)
+   1. [blockchain.com](https://www.blockchain.com/explorer)
+   2. [blockchair.com](https://blockchair.com/bitcoin)
+   3. [blockcypher.com](https://live.blockcypher.com/btc/)
+   4. [blockstream.info](https://blockstream.info/)
+   5. [mempool.space](https://mempool.space/)
 11. 比特币的交易手续费是与交易的大小有关的，交易的大小是由交易的输入和输出决定的，输入和输出的数量越多，交易的大小就越大，交易的手续费也就越高。同时，交易的手续费也与交易的优先级有关，优先级越高，手续费也就越高。交易的优先级是由交易的输入和输出的年龄决定的，年龄越大，优先级越高。因此如果你想要交易的手续费尽可能的低，那么你可以尽可能的少使用输入和输出，同时尽可能的使用年龄较大的输入和输出。
 
 ### 1.2 UTXO（Unspent Transaction Output）
