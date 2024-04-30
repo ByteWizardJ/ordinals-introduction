@@ -226,7 +226,7 @@ OP_PUSH "text/plain;charset=utf-8"
 
 这里以字母 `i` 为分隔符，分成两部分。
 
-`i` 前面的部分是 reveal 交易的ID （ txid ）。后面 `i` 的数字定义了在 reveal 交易中铭刻的新铭文的索引（从 0 开始）。
+`i` 前面的部分是 reveal 交易的ID （ txid ）。后面 `i` 的数字定义了在 reveal 交易中铭刻的新铭文的索引（从 0 开始的十进制数据）。
 
 铭文可以位于不同的输入中，也可以位于同一输入中，也可以位于两者的组合中。在任何情况下，排序都是明确的，因为解析器将连续遍历输入并查找所有铭文 envelopes 。
 
@@ -278,7 +278,11 @@ OP_ENDIF
 
 如果指针等于或大于刻写事务输出中的总 sat 数，则忽略它，并照常进行刻写。指针字段的值是一个**小端字节序**的整数，尾随零将被忽略。
 
-这可用于单个交易中在不同聪上的创建多个铭文，如果不指定指针，它们将在同一聪上创建。
+这可用于单个交易中在不同聪上的创建多个铭文。
+
+**注意**：如果不指定指针。则同一个交易中的同一个输入中的铭文会被铭刻在同一个聪上，这个聪就是该输入中的第一个聪。同样的其他输入中的铭文会被铭刻在对应输入的第一个聪上面。
+
+具体的可以看下面的例子。
 
 #### 5.2.1 指针的使用
 
@@ -317,7 +321,7 @@ OP_ENDIF
 
 #### 5.3.2 父子铭文的使用示例
 
-现在有一个铭文 P，其 ID 为 `000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1fi0`。现在我们要创建一个子铭文 C。
+现在有一个铭文 P，其 ID 为 `000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1fi256`。现在我们要创建一个子铭文 C。
 
 ```
 OP_FALSE
@@ -326,7 +330,7 @@ OP_IF
   OP_PUSH 1
   OP_PUSH "text/plain;charset=utf-8"
   OP_PUSH 3
-  OP_PUSH 0x1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100
+  OP_PUSH 0x1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a090807060504030201000001
   OP_PUSH 0
   OP_PUSH "Hello, world!"
 OP_ENDIF
@@ -334,15 +338,15 @@ OP_ENDIF
 
 这里面需要注意的就是父铭文的 ID 的序列化。
 
-父铭文的 ID 首先是交易 ID，然后是 index。交易 ID 是 `000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f`，index 是 `0`。
+父铭文的 ID 首先是交易 ID，然后是 index。交易 ID 是 `000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f`，index 是 `256`。
 
 首先对交易 ID 进行反转，得到 `0x1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100`。
 
-然后添加 index 的反转 `0`，省略尾随零，因此被省略。
+然后 index  `256` 转换为十六进制为 `100`，将其补齐后是`0100`，然后进行翻转得到`0001`，没有尾随零因此最终结果是`0001` 。
 
-最后得到的结果是 `0x1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100`。
+最后得到的结果是 `0x1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a090807060504030201000001`。
 
-另外的一个例子，如果父铭文的 ID 是 `000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1fi255`，其中 index 是 `255`。
+另外的一个例子，如果父铭文的 ID 是 `000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1fi0`，其中 index 是 `0`。
 
 结果是
 
@@ -351,7 +355,7 @@ OP_FALSE
 OP_IF
   …
   OP_PUSH 3
-  OP_PUSH 0x1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100ff
+  OP_PUSH 0x1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100
   …
 OP_ENDIF
 ```
@@ -434,7 +438,151 @@ OP_ENDIF
 
 ## 7 铭文实例
 
-### 7.1 递归铭文
+### 7.1 Inscription ID
+
+https://mempool.space/signet/tx/1688b64f86f7af4f66d45225f336d24145a64ff5e45aa8b7f0fdc002f403a1d1
+
+这个交易中有 4 个输入，并且每个输入都有一定数量的铭文。
+
+其 ID 分别如下所示。
+
+| Input | Inscription Count | Indices |
+|-------|------------------|---------|
+| 0     | 2                | [i0](https://signet.ordinals.com/inscription/1688b64f86f7af4f66d45225f336d24145a64ff5e45aa8b7f0fdc002f403a1d1i0), [i1](https://signet.ordinals.com/inscription/1688b64f86f7af4f66d45225f336d24145a64ff5e45aa8b7f0fdc002f403a1d1i1)  |
+| 1     | 1                | [i2](https://signet.ordinals.com/inscription/1688b64f86f7af4f66d45225f336d24145a64ff5e45aa8b7f0fdc002f403a1d1i2)      |
+| 2     | 3                | [i3](https://signet.ordinals.com/inscription/1688b64f86f7af4f66d45225f336d24145a64ff5e45aa8b7f0fdc002f403a1d1i3), [i4](https://signet.ordinals.com/inscription/1688b64f86f7af4f66d45225f336d24145a64ff5e45aa8b7f0fdc002f403a1d1i4), [i5](https://signet.ordinals.com/inscription/1688b64f86f7af4f66d45225f336d24145a64ff5e45aa8b7f0fdc002f403a1d1i5) |
+| 3     | 4                | [i6](https://signet.ordinals.com/inscription/1688b64f86f7af4f66d45225f336d24145a64ff5e45aa8b7f0fdc002f403a1d1i6), [i7](https://signet.ordinals.com/inscription/1688b64f86f7af4f66d45225f336d24145a64ff5e45aa8b7f0fdc002f403a1d1i7), [i8](https://signet.ordinals.com/inscription/1688b64f86f7af4f66d45225f336d24145a64ff5e45aa8b7f0fdc002f403a1d1i8), [i9](https://signet.ordinals.com/inscription/1688b64f86f7af4f66d45225f336d24145a64ff5e45aa8b7f0fdc002f403a1d1i9) |
+
+上面的这个交易中有 4 个输入，并且每个输入都有一定数量的铭文，铭文中没有指针。
+
+该交易只有一个输出：https://signet.ordinals.com/output/1688b64f86f7af4f66d45225f336d24145a64ff5e45aa8b7f0fdc002f403a1d1:0
+
+输出中的所有的聪有以下的范围
+* 572367169552182 – 572367169553509
+* 572367169553509 – 572367169554832
+* 572367169554832 – 572367169556162
+* 572367169556162 – 572367169556317
+
+这些对应着上面的四个输入的聪的范围（最后一个范围略小于其对应的输入）。
+
+每一个输入中的铭文都被铭刻在其输入对应的首个聪上。
+
+* `i0`，`i1` 铭文被铭刻在 572367169552182 这个聪上。
+* `i2` 铭文被铭刻在 572367169553509 这个聪上。
+* `i3`，`i4`，`i5` 铭文被铭刻在 572367169554832 这个聪上。
+* `i6`，`i7`，`i8`，`i9` 铭文被铭刻在 572367169556162 这个聪上。
+
+注意：如果输出中聪的总数量小于输入的数量，而且没有使用指针的话，铭刻的铭文会出现丢失的情况。
+
+比如下面的交易：
+
+https://signet.ordinals.com/tx/29be30fefaa15aeee3bc0c0732d6bef19e4d6c7075eb4fe7c71a6877e06b1408
+
+其中铭文 ID 分别如下所示。
+
+| Input | Inscription Count | Indices |
+|-------|------------------|---------|
+| 0     | 2                | [i0](https://signet.ordinals.com/inscription/29be30fefaa15aeee3bc0c0732d6bef19e4d6c7075eb4fe7c71a6877e06b1408i0), [i1](https://signet.ordinals.com/inscription/29be30fefaa15aeee3bc0c0732d6bef19e4d6c7075eb4fe7c71a6877e06b1408i1)  |
+| 1     | 1                | [i2](https://signet.ordinals.com/inscription/29be30fefaa15aeee3bc0c0732d6bef19e4d6c7075eb4fe7c71a6877e06b1408i2)      |
+| 2     | 3                | [i3](https://signet.ordinals.com/inscription/29be30fefaa15aeee3bc0c0732d6bef19e4d6c7075eb4fe7c71a6877e06b1408i3), [i4](https://signet.ordinals.com/inscription/29be30fefaa15aeee3bc0c0732d6bef19e4d6c7075eb4fe7c71a6877e06b1408i4), [i5](https://signet.ordinals.com/inscription/29be30fefaa15aeee3bc0c0732d6bef19e4d6c7075eb4fe7c71a6877e06b1408i5) |
+| 3     | 4                | [i6](https://signet.ordinals.com/inscription/29be30fefaa15aeee3bc0c0732d6bef19e4d6c7075eb4fe7c71a6877e06b1408i6), [i7](https://signet.ordinals.com/inscription/29be30fefaa15aeee3bc0c0732d6bef19e4d6c7075eb4fe7c71a6877e06b1408i7), [i8](https://signet.ordinals.com/inscription/29be30fefaa15aeee3bc0c0732d6bef19e4d6c7075eb4fe7c71a6877e06b1408i8), [i9](https://signet.ordinals.com/inscription/29be30fefaa15aeee3bc0c0732d6bef19e4d6c7075eb4fe7c71a6877e06b1408i9) |
+
+这个交易中有四个输入，也是只有一个输出。
+
+但是输出中的聪的范围是：
+
+* 566366352176691–566366352178018
+* 566366352178018–566366352179091
+
+这个范围小于输入的数量，而且没有使用指针，所以铭文会出现丢失的情况。
+
+比如 `i0` 和 `i1` 铭文会被铭刻在 566366352176691 这个聪上，而 `i2` 铭文会被铭刻在 566366352178018 这个聪上。而 `i3，i4，i5` 这些铭文会被铭刻在其他输出的聪上（在这个交易中是给矿工的手续费中）。
+
+### 7.2 Pointer
+
+为了防止铭刻出现上面的情况就需要使用指针。
+
+比如下面的交易：
+
+https://signet.ordinals.com/tx/443c8580e29f8c5f8e8119d9367485418775fec469c98b3d33df319cd29e6efa
+
+其中铭文 ID 分别如下所示。
+
+| Input | Inscription Count | Indices |
+|-------|------------------|---------|
+| 0     | 2                | [i0](https://signet.ordinals.com/inscription/443c8580e29f8c5f8e8119d9367485418775fec469c98b3d33df319cd29e6efai0), [i1](https://signet.ordinals.com/inscription/443c8580e29f8c5f8e8119d9367485418775fec469c98b3d33df319cd29e6efai1)  |
+| 1     | 1                | [i2](https://signet.ordinals.com/inscription/443c8580e29f8c5f8e8119d9367485418775fec469c98b3d33df319cd29e6efai2)      |
+| 2     | 3                | [i3](https://signet.ordinals.com/inscription/443c8580e29f8c5f8e8119d9367485418775fec469c98b3d33df319cd29e6efai3), [i4](https://signet.ordinals.com/inscription/443c8580e29f8c5f8e8119d9367485418775fec469c98b3d33df319cd29e6efai4), [i5](https://signet.ordinals.com/inscription/443c8580e29f8c5f8e8119d9367485418775fec469c98b3d33df319cd29e6efai5) |
+| 3     | 4                | [i6](https://signet.ordinals.com/inscription/443c8580e29f8c5f8e8119d9367485418775fec469c98b3d33df319cd29e6efai6), [i7](https://signet.ordinals.com/inscription/443c8580e29f8c5f8e8119d9367485418775fec469c98b3d33df319cd29e6efai7), [i8](https://signet.ordinals.com/inscription/443c8580e29f8c5f8e8119d9367485418775fec469c98b3d33df319cd29e6efai8), [i9](https://signet.ordinals.com/inscription/443c8580e29f8c5f8e8119d9367485418775fec469c98b3d33df319cd29e6efai9) |
+
+这个交易中有四个输入，也是只有一个输出。
+
+但是通过指针的使用，铭文都被铭刻在了输出的第一个聪上面。
+
+### 7.3 Provenance 
+
+**注意**：父铭文铭刻的聪必须是在子铭文铭刻的揭示交易的 input 中。
+
+换句话说就是父铭文必须作为子铭文铭刻的交易的一个输入。
+
+父铭文
+
+https://signet.ordinals.com/inscription/3f262da28d8ab6b3a19be31ac7f215cd0b24c030f270353d16cf89bf51acfb4fi0
+
+子铭文
+
+https://signet.ordinals.com/inscription/cb3bb3bab5e8348ea7dced808e9fc85e98d9072c6cca94060ad2e56a5e3ea49fi0
+
+https://signet.ordinals.com/inscription/cb3bb3bab5e8348ea7dced808e9fc85e98d9072c6cca94060ad2e56a5e3ea49fi1
+
+### 7.4 Delegate
+
+下面第一个是被代理铭文 D，第二个是代理铭文 I。
+
+https://signet.ordinals.com/inscription/0cf3a6e110e7e76271662f7d6d05a1fd3214153eef182797161aee1e9a3f91c9i0
+
+https://signet.ordinals.com/inscription/94ca74cd54bacddfb6d1748907838995677191175a90400078c46d481580ef53i0
+
+查看内容会发现 I 中显示的是 D 中的内容。
+
+另外一个例子
+
+被代理铭文 D
+
+https://signet.ordinals.com/inscription/babfc280e0e38b0898f37bf9f087cd2a5c5aa470b8af8007ea8b2dca889d84f9i256
+
+代理铭文 I
+
+https://signet.ordinals.com/inscription/e27884e551d884cac3a23b82d0250795dd461d77f94cd1c800a45df99a9ecdb8i0
+
+### 7.5 Metadata
+
+https://signet.ordinals.com/inscription/8482ea175cec55fab048b81cfd3adeb57e6431a37457e7a59b55e4e6030a6d6fi0
+
+铭文的 metadata 内容转换成 json 如下所示：
+
+```
+{
+  "integer": 123,
+  "float": 123.456,
+  "string": "hello world",
+  "array": [1, 2, 3],
+  "object": {
+    "key1": "value1",
+    "key2": "value2"
+  },
+  "boolean": true,
+  "null": null,
+  "undefined": "undefined",
+  "byteString": "48656c6c6f20576f726c64",
+  "taggedData": {
+    "tag": 1,
+    "value": "2022-12-31T23:59:59Z"
+  }
+}
+```
+
+### 7.6 Recursion（递归）
 
 
 
